@@ -3,14 +3,17 @@ var router = express.Router();
 
 var db = require("./../public/javascripts/db");
 
+// 引入聚类模块
 var kmeans = require('node-kmeans');
-
+// 引入K-近邻算法
+var classify = require('./../public/javascripts/mykNN');
 
 /* GET home page. */
 router.get('/', function (req, res, next) {
   res.render('index', {title: 'Express'});
 });
 
+// 样本数据分析
 router.get('/first', function (req, res, next) {
   /**/
   db.query(`SELECT topic.tTopic,topic.tHeadImage,chat.tId,count(*) AS count from topic,user,chat WHERE topic.uId=user.uId and chat.tId=topic.tId GROUP BY tId  ORDER BY count DESC  LIMIT 3`, [], function (results, rows) {
@@ -73,8 +76,6 @@ from user`, [], function (results, rows) {
 
     var sex = JSON.parse(results)
 
-    console.log(sex);
-
     db.query(`
             SELECT userBirthday,userRegDate,userLocal FROM user`, [], function (results, rows) {
 
@@ -89,7 +90,7 @@ from user`, [], function (results, rows) {
             age20.push(getage(res1[i].userBirthday))
           } else if (20 <= getage(res1[i].userBirthday) && getage(res1[i].userBirthday) < 25) {
             age30.push(getage(res1[i].userBirthday))
-          
+
           } else if (25 <= getage(res1[i].userBirthday) && getage(res1[i].userBirthday) < 30) {
             age40.push(getage(res1[i].userBirthday))
 
@@ -239,13 +240,15 @@ from user`, [], function (results, rows) {
       })
     })
   })
-})
+});
+
 // 获得用户行为信息分析
 router.get('/useraction', function (req, res, next) {
 
-  db.query(`SELECT userCollectNum,userTopicNum,userAttentionNum,userLoginNum,userRegDate FROM user`, [], function (results, rows) {
+  db.query(`select uId,userName,userStatement,userEmail,userCollectNum,userTopicNum,userAttentionNum,userLoginNum,userRegDate FROM user order by uId`, [], function (results, rows) {
 
     var _res = res
+    var alluser = JSON.stringify(JSON.parse(results))
     var res1 = JSON.parse(results)
 
     // 日期转年龄，字符串转数字对象
@@ -272,10 +275,22 @@ router.get('/useraction', function (req, res, next) {
           // console.error(err);
         } else {
 
+          (alluser) = JSON.parse(alluser)
+
+          var rightArr = userClass(res, true);
+
+          var userList = [];
+          for (let j = 0; j < alluser.length; j++) {
+            for (let i = 0; i < rightArr.length; i++) {
+              if (alluser[j].uId === rightArr[i]) {
+                userList.push(alluser[j])
+              }
+            }
+          }
           _res.status(200).json({
             err_code: 0,
             message: 'OK',
-            results: userClass(res, true)
+            results: userList
           })
           // centroid是聚类中心簇
           // cluster是详细信息
@@ -301,10 +316,23 @@ router.get('/useraction', function (req, res, next) {
           // console.error(err);
         } else {
 
+          (alluser) = JSON.parse(alluser)
+
+          var rightArr = userClass(res, true);
+
+          var userList = [];
+          for (let j = 0; j < alluser.length; j++) {
+            for (let i = 0; i < rightArr.length; i++) {
+              if (alluser[j].uId === rightArr[i]) {
+                userList.push(alluser[j])
+              }
+            }
+          }
+
           _res.status(200).json({
             err_code: 0,
             message: 'OK',
-            results: userClass(res, true)
+            results: userList
           })
           // centroid是聚类中心簇
           // cluster是详细信息
@@ -314,7 +342,7 @@ router.get('/useraction', function (req, res, next) {
         }
       });
     } else if (req.query.type == 'value') {
-      // kmeans分析人气用户
+      // kmeans分析价值用户
       for (let i = 0; i < data.length; i++) {
         vectors[i] = [data[i]['userAttentionNum'], data[i]['userLoginNum']];
       }
@@ -328,10 +356,23 @@ router.get('/useraction', function (req, res, next) {
           // console.error(err);
         } else {
 
+          (alluser) = JSON.parse(alluser)
+
+          var rightArr = userClass(res, true);
+
+          var userList = [];
+          for (let j = 0; j < alluser.length; j++) {
+            for (let i = 0; i < rightArr.length; i++) {
+              if (alluser[j].uId === rightArr[i]) {
+                userList.push(alluser[j])
+              }
+            }
+          }
+
           _res.status(200).json({
             err_code: 0,
             message: 'OK',
-            results: userClass(res, true)
+            results: userList
           })
           // centroid是聚类中心簇
           // cluster是详细信息
@@ -342,7 +383,7 @@ router.get('/useraction', function (req, res, next) {
       });
 
     } else if (req.query.type == 'encourage') {
-      // kmeans分析价值用户
+      // kmeans分析可激励用户
       for (let i = 0; i < data.length; i++) {
         vectors[i] = [data[i]['userCollectNum'], data[i]['userTopicNum'], data[i]['userAttentionNum'], data[i]['userLoginNum'], data[i]['userRegDate']];
       }
@@ -355,36 +396,34 @@ router.get('/useraction', function (req, res, next) {
           })
           // console.error(err);
         } else {
+          (alluser) = JSON.parse(alluser)
+
+          var rightArr = userClass(res, false);
+
+          var userList = [];
+          for (let j = 0; j < alluser.length; j++) {
+            for (let i = 0; i < rightArr.length; i++) {
+              if (alluser[j].uId === rightArr[i]) {
+                userList.push(alluser[j])
+              }
+            }
+          }
 
           _res.status(200).json({
             err_code: 0,
             message: 'OK',
-            results: userClass(res, false)
+            results: userList
           })
           // centroid是聚类中心簇
           // cluster是详细信息
           // clusterInd是原索引
           // console.log('%o', res);
-
         }
       });
-
     }
   })
-})
+});
 
-// 获取所有用户信息
-router.get('/alluseranalysis', function (req, res, next) {
-  db.query(`
-            SELECT uId,userName,userStatement,userEmail,userRegDate FROM
-            user order by uId `, [], function (results, rows) {
-    res.status(200).json({
-      err_code: 0,
-      message: 'OK',
-      results: results,
-    })
-  })
-})
 // 获取文章基础数据进行分析
 router.get('/totaltopic', function (req, res, next) {
   db.query(`
@@ -458,29 +497,31 @@ router.get('/totaltopic', function (req, res, next) {
     var age = [age10.length, age20.length, age30.length, age40.length]
 
     var res4 = JSON.parse(results)
-    // 求发布类型
-    var type1 = [], type2 = [], type3 = [], type4 = [], type5 = [];
+
+    // 求发布主题
+    var allObj = []
+    var obj = {}
     for (i = 0; i < res4.length; i++) {
       if (res4[i].tModel) {
-
-        if (model(res4[i].tModel) == '娱乐' || model(res4[i].tModel) == '电影' || model(res4[i].tModel) == '游戏') {
-          type1.push(1)
-        } else if (model(res4[i].tModel) == '生活' || model(res4[i].tModel) == '汽车' || model(res4[i].tModel) == '职场' || model(res4[i].tModel) == '房产' || model(res4[i].tModel) == '人物' || model(res4[i].tModel) == '体育') {
-          type2.push(2)
-
-        } else if (model(res4[i].tModel) == '互联网' || model(res4[i].tModel) == '创投' || model(res4[i].tModel) == '评测') {
-          type3.push(3)
-
-        } else if (model(res4[i].tModel) == '科技' || model(res4[i].tModel) == '计算机' || model(res4[i].tModel) == '智能') {
-
-          type4.push(4)
-        } else if (model(res4[i].tModel) == '综合') {
-
-          type5.push(5)
+        var model = JSON.parse(res4[i].tModel)[0]
+        if (obj[model] === undefined) {
+          obj[model] = 1
+        } else {
+          obj[model]++
         }
       }
     }
-    var type = [type1.length, type2.length, type3.length, type4.length, type5.length]
+
+    var out_arr = []
+    for (var key in obj) {
+      var temp = {};			//创建临时对象
+      temp.name = key;		//存储对象的Key为name
+      temp.value = obj[key];	//存储value
+      out_arr.push(temp);
+    }
+
+
+    var type = out_arr
 
 
     var res5 = JSON.parse(results)
@@ -567,8 +608,280 @@ router.get('/totaltopic', function (req, res, next) {
       results6: addtopic,
     })
   })
-})
+});
 
+// 作者推荐
+router.get('/getvalueuser', function (req, res, next) {
+
+  var uId = req.query.uId
+
+  db.query(`SELECT  uId,userName,userAvatar,userSex,userStatement,userCollectNum,userTopicNum,userAttentionNum,userLoginNum,userRegDate FROM user`, [], function (results, rows) {
+
+    var _res = res
+    var alluser = JSON.stringify(JSON.parse(results))
+    var res1 = JSON.parse(results)
+
+    // 日期转年龄，字符串转数字对象
+    for (i = 0; i < res1.length; i++) {
+      if (res1[i].userRegDate) {
+        res1[i].userRegDate = Number(getage(res1[i].userRegDate))
+        res1[i].userLoginNum = Number(res1[i].userLoginNum)
+      }
+    }
+    var vectors = new Array();
+    var data = res1
+    // kmeans分析价值用户
+    for (let i = 0; i < data.length; i++) {
+      vectors[i] = [data[i]['userCollectNum'], data[i]['userTopicNum'], data[i]['userAttentionNum'], data[i]['userLoginNum'], data[i]['userRegDate']];
+    }
+    kmeans.clusterize(vectors, {k: 20}, (err, res) => {
+      if (err) {
+        _res.status(200).json({
+          err_code: 0,
+          message: 'OK',
+          results: err
+        })
+        // console.error(err);
+      } else {
+        alluser = JSON.parse(alluser)
+
+        var rightArr = userClass(res, true)
+
+        var userList = [];
+        for (let j = 0; j < alluser.length; j++) {
+          for (let i = 0; i < rightArr.length; i++) {
+            if (alluser[j].uId === rightArr[i]) {
+              userList.push(alluser[j])
+            }
+          }
+        }
+
+        if (Number(uId) === 0) {
+          for (let j = 0; j < rightArr.length; j++) {
+            userList[j].isAttention = false
+          }
+          _res.status(200).json({
+            err_code: 0,
+            message: 'OK',
+            results: userList
+          })
+        } else {
+          //判断推荐作者的关注与否
+          db.query(`SELECT aId,uId,usersId FROM attention`, [], function (results, rows) {
+            var attentionArr = JSON.parse(results);
+
+            for (let w = 0; w < userList.length; w++) {
+              for (let v = 0; v < attentionArr.length; v++) {
+                if (Number(attentionArr[v].usersId) === Number(userList[w].uId) && Number(attentionArr[v].uId) === Number(uId)) {
+                  userList[w]['isAttention'] = true
+
+                } else {
+                  // userList[w]['isAttention'] = false
+                }
+              }
+            }
+            for (let s = 0; s < userList.length; s++) {
+              if (!userList[s].isAttention) {
+                userList[s].isAttention = false
+              }
+            }
+            _res.status(200).json({
+              err_code: 0,
+              message: 'OK',
+              results: userList,
+            })
+          })
+        }
+        // centroid是聚类中心簇
+        // cluster是详细信息
+        // clusterInd是原索引
+        // console.log('%o', res);
+      }
+    });
+  })
+});
+
+// 获得文章信息分析
+router.get('/topicaction', function (req, res, next) {
+
+  db.query(`select topic.tId,user.userName,topic.tTopic,topic.tRecommend,topic.tModel,topic.tCollectNum,topic.tChatNum,topic.tTime FROM
+            topic,user WHERE topic.uId=user.uId order by tId`, [], function (results, rows) {
+
+    var _res = res
+    var alltopic = JSON.stringify(JSON.parse(results))
+    var res1 = JSON.parse(results)
+
+    var vectors = new Array();
+    var data = res1;
+    if (req.query.type == 'value') {
+      // kmeans分析价值文章
+      for (let i = 0; i < data.length; i++) {
+        vectors[i] = [data[i]['tCollectNum'], data[i]['tChatNum'], data[i]['tRecommend']];
+      }
+      kmeans.clusterize(vectors, {k: 20}, (err, res) => {
+        if (err) {
+          _res.status(200).json({
+            err_code: 0,
+            message: 'OK',
+            results: err
+          })
+          // console.error(err);
+        } else {
+
+          (alltopic) = JSON.parse(alltopic)
+
+          var rightArr = userClass(res, true);
+
+          var topicList = [];
+          var chartsData = []
+          for (let j = 0; j < alltopic.length; j++) {
+            for (let i = 0; i < rightArr.length; i++) {
+              if (alltopic[j].tId === rightArr[i]) {
+                topicList.push(alltopic[j])
+              }
+            }
+            chartsData.push([alltopic[j].tRecommend, alltopic[j].tCollectNum, alltopic[j].tChatNum])
+          }
+          console.log(chartsData);
+
+          _res.status(200).json({
+            err_code: 0,
+            message: 'OK',
+            results: topicList,
+            chartsData: chartsData
+          })
+          // centroid是聚类中心簇
+          // cluster是详细信息
+          // clusterInd是原索引
+          // console.log('%o', res);
+          // console.log(userClass(res, false));
+        }
+      });
+    } else if (req.query.type == 'encourage') {
+      // kmeans分析可激励文章
+      for (let i = 0; i < data.length; i++) {
+        vectors[i] = [data[i]['tCollectNum'], data[i]['tChatNum'], data[i]['tRecommend']];
+      }
+      kmeans.clusterize(vectors, {k: 20}, (err, res) => {
+        if (err) {
+          _res.status(200).json({
+            err_code: 0,
+            message: 'OK',
+            results: err
+          })
+          // console.error(err);
+        } else {
+          (alltopic) = JSON.parse(alltopic)
+
+          var rightArr = userClass(res, false);
+
+          var topicList = [];
+          for (let j = 0; j < alltopic.length; j++) {
+            for (let i = 0; i < rightArr.length; i++) {
+              if (alltopic[j].tId === rightArr[i]) {
+                topicList.push(alltopic[j])
+              }
+            }
+          }
+          // 转化标签
+          /*for (var i = 0; i < topicList.length; i++) {
+            if (topicList[i].tModel) {
+              topicList[i].tModel = (JSON.parse(topicList[i].tModel));
+            }
+          }
+          for (var j = 0; j < topicList.length; j++) {
+            var tagArr = []
+            if (topicList[j].tModel) {
+              // console.log(topicList[j].tModel[0]);
+              for (var key in topicList[j].tModel[0]) {
+                if (topicList[j].tModel[0][key] === 1) {
+                  tagArr.push(key)
+                }
+              }
+            }
+            topicList[j].tModel = tagArr
+          }*/
+          _res.status(200).json({
+            err_code: 0,
+            message: 'OK',
+            results: topicList
+          })
+          // centroid是聚类中心簇
+          // cluster是详细信息
+          // clusterInd是原索引
+          // console.log('%o', res);
+        }
+      });
+    }
+  })
+});
+
+// 文章推荐
+router.get('/getvaluetopic', function (req, res, next) {
+
+  var sModel = JSON.stringify(JSON.parse(req.query.model))
+
+  sModel = JSON.parse(sModel)
+
+  db.query(`select topic.tId,topic.uId,topic.tId,topic.tTopic,topic.tModel,topic.tTime,topic.tWords,topic.tHeadImage,user.userAvatar,user.userName from topic,user WHERE topic.uId = user.uId order by tId desc`, [], function (results, rows) {
+    var topiclist = JSON.parse(results)
+
+    var alltopic = JSON.parse(results)
+
+    db.query(`SELECT spValue FROM special WHERE spSecret=0`, [], function (results, rows) {
+
+      results = JSON.parse(results)
+
+
+      var allObj = []
+      /*for (let z = 0; z < alltopic.length; z++) {
+        allObj[z] = obj
+      }*/
+
+
+      // 闭包问题出现
+      for (let i = 0; i < alltopic.length; i++) {
+        if (alltopic[i].tModel) {
+          let model = JSON.parse(alltopic[i].tModel)
+
+          let obj = {}
+
+          for (let i = 0; i < results.length; i++) {
+            obj[results[i].spValue] = 0
+          }
+
+          for (let mkey in obj) {
+            obj[mkey] = 0
+          }
+          // console.log(model[j]);
+          for (let key in obj) {
+            for (let j = 0; j < model.length; j++) {
+              if (key === model[j]) {
+                obj[key] = 1;
+              }
+            }
+          }
+          // console.log(obj);
+          allObj.push(obj)
+
+        }
+      }
+      // console.log(classify(standardization(modelArr, modelArr, 3, true)))
+      var indexarr = classify(standardization(sModel[0]), allObj, 50);
+
+      var rightarr = []
+      for (var i = 1; i < indexarr.length; i++) {
+        rightarr.push(topiclist[indexarr[i].index]);
+      }
+
+      res.status(200).json({
+        err_code: 0,
+        message: 'OK',
+        results: rightarr
+      })
+    })
+  })
+})
 
 // 通过日期获取年龄
 function getage(strBirthday) {
@@ -696,11 +1009,11 @@ function userClass(res, flag) {
   if (flag) {
 
     data = res[objSort[res.length - 1].index].clusterInd
-    console.log(data);
+
     data = data.map(function (currentValue) {
       return currentValue + 1
     })
-    console.log(data);
+
     return data
   } else {
 
@@ -717,14 +1030,22 @@ function sortValue(a, b) {
   return a.value - b.value
 }
 
-// 辨别文章类型
-function model(str) {
-  str = JSON.parse(str)[0]
-  for (var key in str) {
-    if (str[key] === 1) {
-      return key
-    }
+// 标准化数据
+function standardization(obj) {
+  var arr = []
+  var objarr = []
+  for (var key in obj) {
+    arr.push(obj[key]);
   }
+  var max = Math.max.apply(null, arr)
+  var min = Math.min.apply(null, arr)
+  for (var key in obj) {
+    (obj[key]) = (obj[key] - min) / (max - min);
+  }
+
+  objarr.push(obj); //属性
+
+  return (objarr);
 }
 
 module.exports = router;
