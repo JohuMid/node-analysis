@@ -742,7 +742,6 @@ router.get('/topicaction', function (req, res, next) {
             }
             chartsData.push([alltopic[j].tRecommend, alltopic[j].tCollectNum, alltopic[j].tChatNum])
           }
-          console.log(chartsData);
 
           _res.status(200).json({
             err_code: 0,
@@ -823,7 +822,7 @@ router.get('/getvaluetopic', function (req, res, next) {
 
   sModel = JSON.parse(sModel)
 
-  db.query(`select topic.tId,topic.uId,topic.tId,topic.tTopic,topic.tModel,topic.tTime,topic.tWords,topic.tHeadImage,user.userAvatar,user.userName from topic,user WHERE topic.uId = user.uId order by tId desc`, [], function (results, rows) {
+  db.query(`select topic.tId,topic.uId,topic.tId,topic.tTopic,topic.tModel,topic.tTime,topic.tWords,topic.tHeadImage,user.userAvatar,user.userName from topic,user WHERE topic.uId = user.uId and topic.tHeadImage is not null order by tId desc`, [], function (results, rows) {
     var topiclist = JSON.parse(results)
 
     var alltopic = JSON.parse(results)
